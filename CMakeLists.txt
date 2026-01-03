@@ -9,12 +9,12 @@ add_library(robotarm
         src/dynamixel_protocol.c
 )
 target_include_directories(robotarm PUBLIC include PRIVATE vendor/dynamixel/include)
-target_link_libraries(robotarm PRIVATE "${CMAKE_SOURCE_DIR}/vendor/dynamixel/lib/dynamixel.o")
+#target_link_libraries(robotarm PRIVATE "${CMAKE_SOURCE_DIR}/vendor/dynamixel/lib/dynamixel.o")
 
 # Add tools subdirectories
 add_subdirectory(tools/emulator)
 add_subdirectory(tools/hanoi-solver)
 
 # Optional: Install rules
-install(TARGETS robotarm DESTINATION lib)
-install(DIRECTORY include/ DESTINATION include)
+#install(TARGETS robotarm DESTINATION lib)
+#install(DIRECTORY include/ DESTINATION include)

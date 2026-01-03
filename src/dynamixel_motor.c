@@ -1,4 +1,4 @@
-#include "dynamixel_motor.h"
+#include <robotarm.h>
 #include "dynamixel_protocol.h"
 #include <unistd.h>
 

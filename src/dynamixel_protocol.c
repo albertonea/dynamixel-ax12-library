@@ -1,11 +1,9 @@
 #include "dynamixel_protocol.h"
 #include <dynamixel/dynamixel.h>
-#include <string.h>
-#include <stdio.h>
 
 unsigned char dxl_calculate_checksum(unsigned char id, unsigned char length,
-                                      unsigned char instruction, 
-                                      unsigned char *params, int param_count) {
+                                     unsigned char instruction,
+                                     unsigned char *params, int param_count) {
     unsigned int sum = id + length + instruction;
     for (int i = 0; i < param_count; i++) {
         sum += params[i];

@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) {
 
     int fd = open(argv[1], O_RDONLY);  // Blocking mode
     if (fd == -1 && errno == ENOENT) {
+        printf("file: %s does not exist, creating...\n", argv[1]);
         int wfd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
         if (wfd == -1) {
             perror("create");
