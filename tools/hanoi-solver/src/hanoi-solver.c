@@ -1,8 +1,8 @@
-#include "../src/dynamixel_motor.h"
-#include "../vendor/dynamixel/dynamixel.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <dynamixel/dynamixel.h>
+#include "dynamixel_motor.h"
 
 // motors 2, 3, 4 positions for different
 // stack heights of the blacks

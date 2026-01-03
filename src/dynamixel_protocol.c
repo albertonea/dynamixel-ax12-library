@@ -1,5 +1,5 @@
 #include "dynamixel_protocol.h"
-#include "../vendor/dynamixel/dynamixel.h"
+#include <dynamixel/dynamixel.h>
 #include <string.h>
 #include <stdio.h>
 

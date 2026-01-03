@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 // --- High-Level Motor Control ---
 bool dxl_set_goal_position(int connection, unsigned char id, uint16_t position);
