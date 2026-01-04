@@ -3,6 +3,9 @@ project(robotarm VERSION 1.0.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
 
+set(DYNAMIXEL_O "${CMAKE_SOURCE_DIR}/vendor/dynamixel/lib/dynamixel.o")
+set(DYNAMIXEL_INCLUDE "${CMAKE_SOURCE_DIR}/vendor/dynamixel/include")
+
 # Build the main library
 add_library(robotarm
         src/dynamixel_motor.c

@@ -249,7 +249,13 @@ void solve(const int n, const int from_index, const int to_index, const int aux_
 }
 
 int main(int argc, char *argv[]) {
-    int connection = open_connection("/tmp/robot", 128);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s /dev/ttyUSB0\n", argv[0]);
+        fprintf(stderr, "Solves the Hanoi Towers problem with the robot arm connected on /dev/ttyUSB0\n");
+        return 1;
+    }
+
+    int connection = open_connection(argv[1], B1000000);
 
     straighten_arm(connection);
 
