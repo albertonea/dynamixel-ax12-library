@@ -22,6 +22,26 @@ bool dxl_write_register(
     return resp.valid && (resp.error == 0);
 }
 
+// bool dxl_sync_write(
+//     int connection,
+//     unsigned char *ids,
+//     unsigned char address,
+//     unsigned int *value,
+//     int register_size
+//     ) {
+//     unsigned char params[register_size + 1];
+//     params[0] = address;
+//
+//     // create params from register size
+//     for (int i = 1; i < register_size + 1; i++) {
+//         params[i] = (unsigned char)(value & 0xFF);
+//         value >>= 8;
+//     }
+//
+//     response resp = send_instruction(connection, id, INST_WRITE, params, 3);
+//     return resp.valid && (resp.error == 0);
+// }
+
 bool dxl_read_register(int connection, unsigned char id, unsigned char address,
                    unsigned int *result, int register_size) {
     unsigned char params[2];
@@ -40,6 +60,11 @@ bool dxl_read_register(int connection, unsigned char id, unsigned char address,
         return true;
     }
     return false;
+}
+
+bool dxl_ping(int connection, unsigned char id) {
+    response resp = send_instruction(connection, id, INST_PING, NULL, 0);
+    return resp.valid;
 }
 
 bool dxl_set_goal_position(int connection, unsigned char id, uint16_t position) {

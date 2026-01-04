@@ -14,4 +14,6 @@ bool dxl_is_moving(int connection, unsigned char id);
 
 void dxl_wait_until_stopped(int connection, unsigned char id);
 
+bool dxl_ping(int connection, unsigned char id);
+
 #endif
