@@ -2,6 +2,17 @@
 #include "dynamixel_protocol.h"
 #include <unistd.h>
 
+uint16_t degrees_to_motor_value(float degrees) {
+    if (degrees < 0.0f) degrees = 0.0f;
+    if (degrees > 300.0f) degrees = 300.0f;
+    return (uint16_t)((degrees * 1023.0f) / 300.0f);
+}
+
+float motor_value_to_degrees(uint16_t value) {
+    if (value > 0x03FF) value = 0x03FF;
+    return (value * 300.0f) / 1023.0f;
+}
+
 bool dxl_write_register(
     int connection,
     unsigned char id,
@@ -22,20 +33,19 @@ bool dxl_write_register(
     return resp.valid && (resp.error == 0);
 }
 
-bool dxl_sync_write(
+bool dxl_sync_write_two_bytes(
     const int connection,
     const unsigned char *ids,
     const unsigned char address,
     const int number_of_motors,
-    const uint16_t *values,
-    const int register_size
+    const uint16_t *values
     ) {
     // (L + 1) * N + 2 (L: Data length for each Dynamixel actuator, N: The number of Dynamixel actuators)
-    int param_len = (register_size + 1) * (number_of_motors) + 2;
+    int param_len = 3 * (number_of_motors) + 2;
     unsigned char params[param_len];
 
     params[0] = address;
-    params[1] = (unsigned char)(register_size & 0xFF);
+    params[1] = (unsigned char)(2 & 0xFF);
 
     int idx = 2;
 
@@ -43,7 +53,37 @@ bool dxl_sync_write(
     for (int i = 0; i < number_of_motors; i++) {
         params[idx] = ids[i]; idx++;
         unsigned int curr_value = values[i];
-        for (int j = 0; j < register_size; i++) {
+        for (int j = 0; j < 2; j++) {
+            params[i] = (unsigned char)(curr_value & 0xFF); idx++;
+            curr_value >>= 8;
+        }
+    }
+
+    response resp = send_instruction(connection, BROADCAST_ADDRESS, INST_SYNC_WRITE, params, param_len);
+    return resp.valid && (resp.error == 0);
+}
+
+bool dxl_sync_write_byte(
+    const int connection,
+    const unsigned char *ids,
+    const unsigned char address,
+    const int number_of_motors,
+    const uint8_t *values
+    ) {
+    // (L + 1) * N + 2 (L: Data length for each Dynamixel actuator, N: The number of Dynamixel actuators)
+    int param_len = 2 * (number_of_motors) + 2;
+    unsigned char params[param_len];
+
+    params[0] = address;
+    params[1] = (unsigned char)(1 & 0xFF);
+
+    int idx = 2;
+
+    // create params from register size
+    for (int i = 0; i < number_of_motors; i++) {
+        params[idx] = ids[i]; idx++;
+        unsigned int curr_value = values[i];
+        for (int j = 0; j < 1; j++) {
             params[i] = (unsigned char)(curr_value & 0xFF); idx++;
             curr_value >>= 8;
         }
@@ -82,8 +122,17 @@ bool dxl_set_goal_position(int connection, unsigned char id, uint16_t position) 
     return dxl_write_register(connection, id, REG_GOAL_POSITION, position, REG_GOAL_POSITION_SIZE);
 }
 
-bool dxl_set_goal_positions_many(int connection, unsigned char *ids, const uint16_t *positions, int number_of_motors) {
-    return dxl_sync_write(connection, ids, REG_GOAL_POSITION, number_of_motors, positions, REG_GOAL_POSITION_SIZE);
+bool dxl_set_goal_position_degrees(int connection, unsigned char id, float degrees) {
+    return dxl_write_register(
+        connection,
+        id,
+        REG_GOAL_POSITION,
+        degrees_to_motor_value(degrees),
+        REG_GOAL_POSITION_SIZE);
+}
+
+bool dxl_set_goal_positions_multi(int connection, unsigned char *ids, const uint16_t *positions, int number_of_motors) {
+    return dxl_sync_write_two_bytes(connection, ids, REG_GOAL_POSITION, number_of_motors, positions);
 }
 
 bool dxl_set_moving_speed(int connection, unsigned char id, uint16_t speed) {
@@ -103,3 +152,5 @@ void dxl_wait_until_stopped(int connection, unsigned char id) {
         usleep(100000);  // 100ms polling interval
     }
 }
+
+
