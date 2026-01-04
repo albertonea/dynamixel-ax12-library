@@ -63,7 +63,6 @@ response send_instruction(const int connection, const unsigned char id,
 
     build_packet(id, instruction, params, param_len, packet);
 
-    // Send and receive
     unsigned char rx_buffer[256];
     int bytes_read = write_to_connection(connection, packet, raw_packet_len,
                                          rx_buffer, 256);

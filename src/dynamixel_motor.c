@@ -5,12 +5,14 @@
 uint16_t degrees_to_motor_value(float degrees) {
     if (degrees < 0.0f) degrees = 0.0f;
     if (degrees > 300.0f) degrees = 300.0f;
-    return (uint16_t)((degrees * 1023.0f) / 300.0f);
+    const int32_t result = (int32_t)((degrees * 1023.0f) / 300.0f);
+    if (result < 0) return 0;
+    if (result > 0x3FF) return 0x3FF;
+    return (uint16_t)result;
 }
 
 float motor_value_to_degrees(uint16_t value) {
-    if (value > 0x03FF) value = 0x03FF;
-    return (value * 300.0f) / 1023.0f;
+    return value * 300.0f / 1023.0f;
 }
 
 bool dxl_write_register(
