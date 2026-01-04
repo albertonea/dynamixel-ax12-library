@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#define BROADCAST_ADDRESS 0xFE
 
 // --- Instructions ---
 #define INST_PING       0x01

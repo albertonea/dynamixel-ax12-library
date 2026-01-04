@@ -69,7 +69,7 @@ response send_instruction(const int connection, const unsigned char id,
                                          rx_buffer, 256);
     
     // Parse response only for non-broadcast ids
-    if (id != 0xFE) {
+    if (id != BROADCAST_ADDRESS) {
         return parse_response(rx_buffer, bytes_read);
     }
 
