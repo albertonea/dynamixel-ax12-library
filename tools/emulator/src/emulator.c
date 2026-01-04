@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -17,11 +18,14 @@
 // Simple Dynamixel protocol parser/response generator for emulator
 #define DYNAMIXEL_HEADER1 0xFF
 #define DYNAMIXEL_HEADER2 0xFF
-#define DYNAMIXEL_BROADCAST 0xFF
+
 #define DYNAMIXEL_INST_PING 0x01
 #define DYNAMIXEL_INST_READ 0x02
 #define DYNAMIXEL_INST_WRITE 0x03
-#define DYNAMIXEL_INST_STATUS 0x55
+
+#define DYNAMIXEL_INSTRUCTION_ERROR 0x20
+#define DYNAMIXEL_CHECKSUM_ERROR 0x04
+#define DYNAMIXEL_NO_ERROR 0x00
 
 typedef struct {
     int fd;
@@ -33,8 +37,21 @@ typedef struct {
 
 static robot_emulator_t *robot_emulator = NULL;
 
-// Parse Dynamixel packet and generate response
-int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *response, int *resp_len) {
+unsigned int calculate_checksum(const unsigned char *packet, const int len) {
+    unsigned char id = packet[2];
+    unsigned int length = packet[3];
+    unsigned char instruction = packet[4];
+
+    // Calculate expected checksum
+    unsigned int calc_checksum = id + length + instruction;
+    for (int i = 5; i < len - 1; i++) {
+        calc_checksum += packet[i];
+    }
+    calc_checksum = ~calc_checksum & 0xFF;
+    return calc_checksum;
+}
+
+bool check_packet_valid(const unsigned char *packet, const int len) {
     if (len < 6 || packet[0] != DYNAMIXEL_HEADER1 || packet[1] != DYNAMIXEL_HEADER2) {
         printf("💥Invalid header, expected: %02X %02X (len>5) but got: %02X %02X (len=%d)\n",
             DYNAMIXEL_HEADER1,
@@ -43,27 +60,22 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
             packet[1],
             len);
 
-        return -1; // Invalid header
+        return false; // Invalid header
+    }
+    return true;
+}
+
+// Parse Dynamixel packet and generate response
+int parse_dynamixel_packet(const unsigned char *packet, const int len, unsigned char *response, int *resp_len) {
+    if (!check_packet_valid(packet, len)) {
+        return -1;
     }
 
     unsigned char id = packet[2];
-    unsigned int length = packet[3];
     unsigned char instruction = packet[4];
     unsigned int checksum = packet[len - 1];
 
-
-    //    unsigned int sum = id + length + instruction;
-    // for (int i = 0; i < param_count; i++) {
-    //     sum += params[i];
-    // }
-    // return (unsigned char)~sum;
-
-    // Calculate expected checksum
-    unsigned int calc_checksum = id + length + instruction;
-    for (int i = 5; i < len - 1; i++) {
-        calc_checksum += packet[i];
-    }
-    calc_checksum = ~calc_checksum & 0xFF;
+    unsigned int calc_checksum = calculate_checksum(packet, len);
 
     if (checksum != calc_checksum) {
         // Send error response (checksum error)
@@ -73,7 +85,7 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
         response[1] = DYNAMIXEL_HEADER2;
         response[2] = id;
         response[3] = 0x02; // Length
-        response[4] = 0x04; // Checksum error
+        response[4] = DYNAMIXEL_CHECKSUM_ERROR; // Checksum error
         response[5] = 0x04; // Checksum
         *resp_len = 6;
         return 0;
@@ -81,7 +93,8 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
 
     // Generate response based on instruction
     switch (instruction) {
-        case DYNAMIXEL_INST_PING:
+        case DYNAMIXEL_INST_PING: {
+
             printf("DYNAMIXEL_INST_PING\n");
             // Ping response - return model, version, etc.
             response[0] = DYNAMIXEL_HEADER1;
@@ -101,10 +114,9 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
             response[11] = ~ping_checksum & 0xFF;
             *resp_len = 12;
             break;
+        }
 
-        case DYNAMIXEL_INST_READ:
-            // Read response - return dummy position data
-        {
+        case DYNAMIXEL_INST_READ: {
             printf("DYNAMIXEL_INST_READ\n");
 
             unsigned char address = packet[5];
@@ -116,50 +128,65 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
             response[3] = reg_len + 2; // Length
             response[4] = 0x00; // Status OK
 
-            // Dummy data - current position ~512 (middle of 0-1023 range)
-            if (address == 0x24 && reg_len == 2) {
-                // Present position
-                response[5] = 0x02; // 512 L
-                response[6] = 0x00; // 512 H
-            } else {
-                memset(response + 5, 0x00, reg_len);
-            }
+            for (int i = 5; i < reg_len + 5; i++) response[i] = 0x00;
 
             // Calculate checksum
             unsigned int read_checksum = 0xFF;
             for (int i = 2; i < reg_len + 5; i++) read_checksum += response[i];
             response[reg_len + 5] = ~read_checksum & 0xFF;
             *resp_len = reg_len + 6;
+            break;
         }
-        break;
 
-        default:
+        case DYNAMIXEL_INST_WRITE: {
+            printf("DYNAMIXEL_INST_WRITE\n");
+
+            response[0] = DYNAMIXEL_HEADER1;
+            response[1] = DYNAMIXEL_HEADER2;
+            response[2] = id;
+            response[3] = 0x02;
+            response[4] = DYNAMIXEL_NO_ERROR;
+            response[5] = 0xFC;
+            *resp_len = 6;
+            break;
+        }
+
+        default: {
             // Unknown instruction - error response
             printf("❓Unknown instruction\n");
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
             response[3] = 0x02;
-            response[4] = 0x07; // Instruction error
+            response[4] = 0x20; // Instruction error
             response[5] = 0x07;
             *resp_len = 6;
             break;
+        }
     }
 
     return 0;
 }
 
-void print_hex(const unsigned char *data, int length) {
-    printf("Sent %d bytes:\n", length);
-    for (int i = 0; i < length; i++) {
-        printf("%02X ", data[i]);
-        if ((i + 1) % 8 == 0) {
-            printf("\n");
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define COLOR_RESET   "\x1b[0m"
+
+void print_packet(const unsigned char *data, int length) {
+    for (int i = 0; i < length - 1; i++) {
+        switch (i) {
+            case 0: printf("%02X ", data[i]); break;
+            case 1: printf("%02X ", data[i]); break;
+            case 2: printf(ANSI_COLOR_GREEN "%02X" COLOR_RESET " ", data[i]); break;
+            case 3: printf(ANSI_COLOR_CYAN "%02X" COLOR_RESET " ", data[i]); break;
+            case 4: printf(ANSI_COLOR_BLUE "%02X" COLOR_RESET " ", data[i]); break;
+            default: printf(ANSI_COLOR_MAGENTA "%02X" COLOR_RESET " ", data[i]); break;
         }
     }
-    if (length % 8 != 0) {
-        printf("\n");
-    }
+    printf("%02X", data[length - 1]);
+    printf("\n");
 }
 
 void *robot_listener(void *arg) {
@@ -179,24 +206,24 @@ void *robot_listener(void *arg) {
         struct timeval timeout = {0, 100000}; // 100ms
         int maxfd = emu->fd + 1;
         int ret = select(maxfd, &readfds, NULL, NULL, &timeout);
-        // printf("select ret=%d errno=%d\n", ret, errno);  // Add after select
 
         if (ret < 0) {
             perror("select");
             break;
         }
         if (ret > 0 && FD_ISSET(emu->fd, &readfds)) {
-            ssize_t len = read(emu->fd, buffer, sizeof(buffer));
+            int len = read(emu->fd, buffer, sizeof(buffer));
             if (len > 0) {
-                printf("Received %zd bytes: ", len);
-                for (ssize_t i = 0; i < len; i++) printf("%02X ", buffer[i]);
-                printf("\n");
+                printf("Received %d bytes: \n", len);
+                print_packet(buffer, len);
 
                 unsigned char response[256];
                 int resp_len;
                 if (parse_dynamixel_packet(buffer, len, response, &resp_len) == 0) {
                     write(emu->fd, response, resp_len);
-                    print_hex(response, resp_len);
+
+                    printf("Sent %d bytes:\n", resp_len);
+                    print_packet(response, resp_len);
                     printf("\n");
                 }
             } else if (len == 0) {
@@ -281,29 +308,6 @@ void cleanup_emulator() {
     }
 }
 
-int test_tty(char *portname) {
-    int masterfd, slavefd;
-    char *slavedevice;
-
-
-    masterfd = posix_openpt(O_RDWR | O_NOCTTY);
-
-
-    if (masterfd == -1
-        || grantpt(masterfd) == -1
-        || unlockpt(masterfd) == -1
-        || (slavedevice = ptsname(masterfd)) == NULL)
-        return -1;
-
-
-    printf("slave device is: %s\n", slavedevice);
-
-
-    slavefd = open(slavedevice, O_RDWR | O_NOCTTY);
-    if (slavefd < 0)
-        return -1;
-}
-
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s /dev/ttyUSB0\n", argv[0]);
@@ -320,9 +324,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Keep running
-    printf("Emulator ready! Your robot arm program can now connect to %s\n", portname);
-    printf("Press Ctrl+C to stop the emulator\n\n");
+    printf("Emulator ready %s\n", portname);
 
     while (1) {
         sleep(1);

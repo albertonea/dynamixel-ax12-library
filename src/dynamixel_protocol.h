@@ -23,7 +23,7 @@
 #define REG_PRESENT_POSITION_SIZE  2
 
 #define REG_MOVING             0x2E
-#define REG_MOVING_SIZE        0x2E
+#define REG_MOVING_SIZE        1
 
 typedef struct {
    unsigned char address;
@@ -37,16 +37,11 @@ typedef struct {
     unsigned char params[32];
     int param_count;
     bool valid;
-} dxl_response;
-
-typedef struct {
-    unsigned char *data;
-    int length;
-} packet;
+} response;
 
 // --- Core Protocol Functions ---
-dxl_response dxl_send_instruction(int connection, unsigned char id,
+response send_instruction(int connection, unsigned char id,
                                    unsigned char instruction,
-                                   unsigned char *params, int param_len);
+                                   const unsigned char *params, int param_len);
 
 #endif
