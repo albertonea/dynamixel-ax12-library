@@ -248,6 +248,42 @@ void solve(const int n, const int from_index, const int to_index, const int aux_
     solve(n - 1, aux_index, to_index, from_index, connection);
 }
 
+int test_write() {
+    int fd = open("/tmp/robotarm", O_RDWR | O_NOCTTY);
+    if (fd < 0) {
+        perror("open /tmp/robotarm");
+        return 1;
+    }
+
+    // Raw serial config (match emulator: 1M baud, 8N1)
+    struct termios tty;
+    tcgetattr(fd, &tty);
+    cfsetospeed(&tty, B1000000);
+    cfsetispeed(&tty, B1000000);
+    cfmakeraw(&tty);
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;  // 8N1
+    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
+    tty.c_cflag |= (CREAD | CLOCAL);
+    tcsetattr(fd, TCSANOW, &tty);
+
+    // Send Dynamixel-style packet (broadcast read ping ID 1)
+    unsigned char tx[] = {0xFF, 0xFF, 0x01, 0x02, 0x00, 0x01, 0xF9};  // Example
+    ssize_t sent = write(fd, tx, sizeof(tx));
+    printf("Sent %zd bytes\n", sent);
+
+    // Read response
+    unsigned char rx[256];
+    ssize_t len = read(fd, rx, sizeof(rx));
+    if (len > 0) {
+        printf("Received %zd bytes: ", len);
+        for (ssize_t i = 0; i < len; i++) printf("%02X ", rx[i]);
+        printf("\n");
+    }
+
+    close(fd);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s /dev/ttyUSB0\n", argv[0]);

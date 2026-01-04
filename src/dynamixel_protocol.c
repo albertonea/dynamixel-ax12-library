@@ -33,7 +33,14 @@ dxl_response dxl_parse_response(unsigned char *buffer, int bytes_read) {
 }
 
 packet build_packet(unsigned char id, unsigned char instruction, unsigned char *params, int param_len) {
-    // Calculate packet size: Header(2) + ID(1) + Length(1) + Inst(1) + Params(N) + Checksum(1)
+
+}
+
+dxl_response dxl_send_instruction(int connection, unsigned char id,
+                                   unsigned char instruction,
+                                   unsigned char *params, int param_len) {
+
+  // Calculate packet size: Header(2) + ID(1) + Length(1) + Inst(1) + Params(N) + Checksum(1)
     unsigned char length = param_len + 2; // Length field = Instruction + Params + Checksum
     int raw_packet_len = 4 + param_len + 2;  // Total bytes to send
 
@@ -55,20 +62,9 @@ packet build_packet(unsigned char id, unsigned char instruction, unsigned char *
     tx_packet[5 + param_len] = dxl_calculate_checksum(id, length, instruction,
                                                          params, param_len);
 
-    packet packet = {tx_packet, raw_packet_len};
-
-    return packet;
-}
-
-dxl_response dxl_send_instruction(int connection, unsigned char id,
-                                   unsigned char instruction,
-                                   unsigned char *params, int param_len) {
-
-    packet packet = build_packet(id, instruction, params, param_len);
-
     // Send and receive
     unsigned char rx_buffer[256];
-    int bytes_read = write_to_connection(connection, packet.data, packet.length,
+    int bytes_read = write_to_connection(connection, tx_packet, raw_packet_len,
                                          rx_buffer, 256);
     
     // Parse response only for non-broadcast ids

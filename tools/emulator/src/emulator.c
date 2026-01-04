@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
+#include <pty.h>
 
 
 // Simple Dynamixel protocol parser/response generator for emulator
@@ -35,29 +36,45 @@ static robot_emulator_t *robot_emulator = NULL;
 // Parse Dynamixel packet and generate response
 int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *response, int *resp_len) {
     if (len < 6 || packet[0] != DYNAMIXEL_HEADER1 || packet[1] != DYNAMIXEL_HEADER2) {
-        return -1;  // Invalid header
+        printf("💥Invalid header, expected: %02X %02X (len>5) but got: %02X %02X (len=%d)\n",
+            DYNAMIXEL_HEADER1,
+            DYNAMIXEL_HEADER2,
+            packet[0],
+            packet[1],
+            len);
+
+        return -1; // Invalid header
     }
 
     unsigned char id = packet[2];
-    unsigned char instruction = packet[4];
     unsigned int length = packet[3];
-    unsigned int checksum = packet[len-1];
+    unsigned char instruction = packet[4];
+    unsigned int checksum = packet[len - 1];
+
+
+    //    unsigned int sum = id + length + instruction;
+    // for (int i = 0; i < param_count; i++) {
+    //     sum += params[i];
+    // }
+    // return (unsigned char)~sum;
 
     // Calculate expected checksum
-    unsigned int calc_checksum = 0xFF;
-    for (int i = 2; i < len-1; i++) {
+    unsigned int calc_checksum = id + length + instruction;
+    for (int i = 5; i < len - 1; i++) {
         calc_checksum += packet[i];
     }
     calc_checksum = ~calc_checksum & 0xFF;
 
     if (checksum != calc_checksum) {
         // Send error response (checksum error)
+        printf("💥Checksum mismatch, expected: %02X but got: %02X\n", calc_checksum, checksum);
+
         response[0] = DYNAMIXEL_HEADER1;
         response[1] = DYNAMIXEL_HEADER2;
         response[2] = id;
-        response[3] = 0x02;  // Length
-        response[4] = 0x04;  // Checksum error
-        response[5] = 0x04;  // Checksum
+        response[3] = 0x02; // Length
+        response[4] = 0x04; // Checksum error
+        response[5] = 0x04; // Checksum
         *resp_len = 6;
         return 0;
     }
@@ -65,17 +82,18 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
     // Generate response based on instruction
     switch (instruction) {
         case DYNAMIXEL_INST_PING:
+            printf("DYNAMIXEL_INST_PING\n");
             // Ping response - return model, version, etc.
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
-            response[3] = 0x07;  // Length
-            response[4] = 0x00;  // Status OK
-            response[5] = 0x01;  // Model number L
-            response[6] = 0x02;  // Model number H
-            response[7] = 0x01;  // Firmware version
-            response[8] = 0x00;  // ID
-            response[9] = 0x00;  // Baud rate
+            response[3] = 0x07; // Length
+            response[4] = 0x00; // Status OK
+            response[5] = 0x01; // Model number L
+            response[6] = 0x02; // Model number H
+            response[7] = 0x01; // Firmware version
+            response[8] = 0x00; // ID
+            response[9] = 0x00; // Baud rate
             response[10] = 0x00; // Delay time
             // Checksum
             unsigned int ping_checksum = 0xFF;
@@ -86,39 +104,43 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
 
         case DYNAMIXEL_INST_READ:
             // Read response - return dummy position data
-            {
-                unsigned char address = packet[5];
-                unsigned char reg_len = packet[6];
+        {
+            printf("DYNAMIXEL_INST_READ\n");
 
-                response[0] = DYNAMIXEL_HEADER1;
-                response[1] = DYNAMIXEL_HEADER2;
-                response[2] = id;
-                response[3] = reg_len + 2;  // Length
-                response[4] = 0x00;  // Status OK
+            unsigned char address = packet[5];
+            unsigned char reg_len = packet[6];
 
-                // Dummy data - current position ~512 (middle of 0-1023 range)
-                if (address == 0x24 && reg_len == 2) {  // Present position
-                    response[5] = 0x02;  // 512 L
-                    response[6] = 0x00;  // 512 H
-                } else {
-                    memset(response + 5, 0x00, reg_len);
-                }
+            response[0] = DYNAMIXEL_HEADER1;
+            response[1] = DYNAMIXEL_HEADER2;
+            response[2] = id;
+            response[3] = reg_len + 2; // Length
+            response[4] = 0x00; // Status OK
 
-                // Calculate checksum
-                unsigned int read_checksum = 0xFF;
-                for (int i = 2; i < reg_len + 5; i++) read_checksum += response[i];
-                response[reg_len + 5] = ~read_checksum & 0xFF;
-                *resp_len = reg_len + 6;
+            // Dummy data - current position ~512 (middle of 0-1023 range)
+            if (address == 0x24 && reg_len == 2) {
+                // Present position
+                response[5] = 0x02; // 512 L
+                response[6] = 0x00; // 512 H
+            } else {
+                memset(response + 5, 0x00, reg_len);
             }
-            break;
+
+            // Calculate checksum
+            unsigned int read_checksum = 0xFF;
+            for (int i = 2; i < reg_len + 5; i++) read_checksum += response[i];
+            response[reg_len + 5] = ~read_checksum & 0xFF;
+            *resp_len = reg_len + 6;
+        }
+        break;
 
         default:
             // Unknown instruction - error response
+            printf("❓Unknown instruction\n");
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
             response[3] = 0x02;
-            response[4] = 0x07;  // Instruction error
+            response[4] = 0x07; // Instruction error
             response[5] = 0x07;
             *resp_len = 6;
             break;
@@ -127,39 +149,62 @@ int parse_dynamixel_packet(unsigned char *packet, int len, unsigned char *respon
     return 0;
 }
 
+void print_hex(const unsigned char *data, int length) {
+    printf("Sent %d bytes:\n", length);
+    for (int i = 0; i < length; i++) {
+        printf("%02X ", data[i]);
+        if ((i + 1) % 8 == 0) {
+            printf("\n");
+        }
+    }
+    if (length % 8 != 0) {
+        printf("\n");
+    }
+}
+
 void *robot_listener(void *arg) {
-    robot_emulator_t *emu = (robot_emulator_t *)arg;
+    robot_emulator_t *emu = (robot_emulator_t *) arg;
+
+    // Make non-blocking for reliable select
+    fcntl(emu->fd, F_SETFL, O_NONBLOCK);
+
+    printf("Robot emulator listening on %s (FD=%d)\n", emu->portname, emu->fd);
+
     unsigned char buffer[256];
-    unsigned char response[256];
-
-    printf("Robot emulator listening on %s\n", emu->portname);
-
     while (emu->running) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(emu->fd, &readfds);
 
-        struct timeval timeout = {0, 100000};  // 100ms
-        int ret = select(emu->fd + 1, &readfds, NULL, NULL, &timeout);
+        struct timeval timeout = {0, 100000}; // 100ms
+        int maxfd = emu->fd + 1;
+        int ret = select(maxfd, &readfds, NULL, NULL, &timeout);
+        // printf("select ret=%d errno=%d\n", ret, errno);  // Add after select
 
+        if (ret < 0) {
+            perror("select");
+            break;
+        }
         if (ret > 0 && FD_ISSET(emu->fd, &readfds)) {
-            int len = read(emu->fd, buffer, sizeof(buffer));
+            ssize_t len = read(emu->fd, buffer, sizeof(buffer));
             if (len > 0) {
-                printf("Received %d bytes: ", len);
-                for (int i = 0; i < len; i++) printf("%02X ", buffer[i]);
+                printf("Received %zd bytes: ", len);
+                for (ssize_t i = 0; i < len; i++) printf("%02X ", buffer[i]);
                 printf("\n");
 
-                int resp_len = 0;
+                unsigned char response[256];
+                int resp_len;
                 if (parse_dynamixel_packet(buffer, len, response, &resp_len) == 0) {
                     write(emu->fd, response, resp_len);
-                    printf("Sent response (%d bytes): ", resp_len);
-                    for (int i = 0; i < resp_len; i++) printf("%02X ", response[i]);
+                    print_hex(response, resp_len);
                     printf("\n");
                 }
+            } else if (len == 0) {
+                printf("EOF on FD\n");
+                break;
             }
         }
     }
-
     return NULL;
 }
 
@@ -167,58 +212,43 @@ int create_emulator_port(const char *portname) {
     // Remove existing port if it exists
     unlink(portname);
 
-    // Create a pseudo-terminal (PTY) pair
-    int master, slave;
+    // Create a pseudo-terminal (PTY) pair using openpty()
+    int master_fd, slave_fd;
     char slave_name[256];
-
-    master = posix_openpt(O_RDWR | O_NOCTTY);
-    if (master < 0) {
-        perror("posix_openpt");
+    char master_name[256];
+    if (openpty(&master_fd, &slave_fd, slave_name, NULL, NULL) < 0) {
+        perror("openpty");
         return -1;
     }
 
-    if (grantpt(master) < 0 || unlockpt(master) < 0) {
-        close(master);
-        return -1;
-    }
+    ttyname_r(master_fd, master_name, sizeof(master_name));
 
-    // Get slave name
-    ptsname_r(master, slave_name, sizeof(slave_name));
-
-    // Create symlink to /dev/ttyUSB0
+    // Create symlink to portname
     if (symlink(slave_name, portname) < 0) {
         perror("symlink");
-        close(master);
-        return -1;
-    }
-
-    // Open slave end for emulator
-    slave = open(slave_name, O_RDWR | O_NOCTTY);
-    if (slave < 0) {
-        perror("open slave");
-        unlink(portname);
-        close(master);
+        close(master_fd);
+        close(slave_fd);
         return -1;
     }
 
     // Configure slave as serial port (1M baud)
     struct termios tty;
-    tcgetattr(slave, &tty);
+    tcgetattr(slave_fd, &tty);
+    cfmakeraw(&tty); // Byte-level: no ICANON, no ECHO
     cfsetospeed(&tty, B1000000);
     cfsetispeed(&tty, B1000000);
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-    tcsetattr(slave, TCSANOW, &tty);
+    tty.c_cflag |= (CS8 | CREAD | CLOCAL); // 8N1
+    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
+    tty.c_iflag = 0;
+    tty.c_oflag = 0;
+    tty.c_lflag = 0;
+    tcsetattr(slave_fd, TCSANOW, &tty);
 
-    printf("Created emulator port: %s -> %s (master=%d, slave=%d)\n",
-           portname, slave_name, master, slave);
+    printf("Created emulator port, master:%s (fd=%d) slave:%s -> %s (fd=%d)\n",
+           master_name, master_fd, portname, slave_name, slave_fd);
 
     robot_emulator = malloc(sizeof(robot_emulator_t));
-    robot_emulator->fd = slave;
+    robot_emulator->fd = master_fd;
     robot_emulator->running = 1;
     robot_emulator->port_created = 1;
     robot_emulator->portname = strdup(portname);
@@ -226,13 +256,13 @@ int create_emulator_port(const char *portname) {
     if (pthread_create(&robot_emulator->listener_thread, NULL, robot_listener, robot_emulator) != 0) {
         free(robot_emulator->portname);
         free(robot_emulator);
-        close(slave);
+        close(slave_fd);
         unlink(portname);
-        close(master);
+        close(master_fd);
         return -1;
     }
 
-    return master;  // Return master FD (not used by client)
+    return master_fd; // Return master FD for external use if needed
 }
 
 void cleanup_emulator() {
@@ -249,6 +279,29 @@ void cleanup_emulator() {
         free(robot_emulator);
         robot_emulator = NULL;
     }
+}
+
+int test_tty(char *portname) {
+    int masterfd, slavefd;
+    char *slavedevice;
+
+
+    masterfd = posix_openpt(O_RDWR | O_NOCTTY);
+
+
+    if (masterfd == -1
+        || grantpt(masterfd) == -1
+        || unlockpt(masterfd) == -1
+        || (slavedevice = ptsname(masterfd)) == NULL)
+        return -1;
+
+
+    printf("slave device is: %s\n", slavedevice);
+
+
+    slavefd = open(slavedevice, O_RDWR | O_NOCTTY);
+    if (slavefd < 0)
+        return -1;
 }
 
 int main(int argc, char *argv[]) {
