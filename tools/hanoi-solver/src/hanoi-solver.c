@@ -6,135 +6,27 @@
 // stack heights of the blacks
 //{0x0, 0xf8}, {0x01, 0xa4}, {0x01, 0x07}
 
-unsigned int block_height_1[3] = {0x0110, 0x01a2, 0x00f5};
-unsigned int block_height_2[3] = {0x011f, 0x01b1, 0x00d5};
-unsigned int block_height_3[3] = {0x0136, 0x01b7, 0x00c0};
-unsigned int block_height_4[3] = {0x0125, 0x01fc, 0x0089};
-unsigned int block_height_5[3] = {0x01ae, 0x0084, 0x0289};
+uint16_t block_height_1[3] = {0x0110, 0x01a2, 0x00f5};
+uint16_t block_height_2[3] = {0x011f, 0x01b1, 0x00d5};
+uint16_t block_height_3[3] = {0x0136, 0x01b7, 0x00c0};
+uint16_t block_height_4[3] = {0x0125, 0x01fc, 0x0089};
+uint16_t block_height_5[3] = {0x01ae, 0x0084, 0x0289};
 
 // Settings
 // Number of blocks
-#define num_of_blocks 4
+#define num_of_blocks 3
+
+const int num_of_motors = 5;
+const uint8_t motor_ids[5] = {1, 2, 3, 4, 5};
 
 // Motor 1 setting deciding where to place the stacks
-const unsigned int from_location = 0x01bc;
-const unsigned int to_location = 0x026b;
-const unsigned int aux_location = 0x01fd;
+const uint16_t from_location = 0x01bc;
+const uint16_t to_location = 0x026b;
+const uint16_t aux_location = 0x01fd;
 
-unsigned int stack_locations[3] = {from_location, to_location, aux_location};
+uint16_t radial_stack_locations[3] = {from_location, to_location, aux_location};
 
 int stacks[3] = {num_of_blocks, 0, 0};
-
-// Reading test data from the robot
-// typedef struct packet {
-//   unsigned char id;
-//   unsigned char instruction;
-//   unsigned char *parameters;
-//   int param_len;
-// } packet;
-//
-// typedef struct buff_wrapper {
-//   unsigned char *buff;
-//   int buff_length;
-//   int bytes_read;
-// } buff_wrapper;
-//
-// packet construct_packet_from_buffer(buff_wrapper *buff) {
-//   unsigned char id = buff->buff[2];
-//   unsigned char length = buff->buff[3];
-//   unsigned char error = buff->buff[4];
-//
-//   unsigned char params[length];
-//   for (int i = 5; i < 5 + length; i++) {
-//     params[i] = buff->buff[i];
-//   }
-//
-//   packet p = {id, error, params, length};
-//   return p;
-// }
-//
-// packet send_packet(packet *packet, int connection) {
-//   int length = (*packet).param_len + 7;
-//
-//   unsigned char *packet_bytes = malloc(length);
-//
-//   for (int i = 0; i < 2; i++) {
-//     (*packet_bytes) = 0xFF;
-//     packet_bytes++;
-//   }
-//
-//   (*packet_bytes) = packet->id;
-//   packet_bytes++;
-//
-//   (*packet_bytes) = (unsigned char)length - 3;
-//   packet_bytes++;
-//
-//   (*packet_bytes) = packet->instruction;
-//   packet_bytes++;
-//
-//   unsigned char sum = 0;
-//
-//   for (int i = 0; i < packet->param_len; i++) {
-//     (*packet_bytes) = packet->parameters[i];
-//     sum += packet->parameters[i];
-//     packet_bytes++;
-//   }
-//
-//   (*packet_bytes) =
-//       ~(packet->id + (unsigned char)length - 3 + packet->instruction + sum);
-//
-//   int buff_len = 100;
-//   unsigned char buff[buff_len];
-//
-//   int bytes_read =
-//       write_to_connection(connection, packet_bytes, length, buff, buff_len);
-//
-//   buff_wrapper bw = {buff, buff_len, bytes_read};
-//
-//   return construct_packet_from_buffer(&bw);
-// }
-//
-// void move_to_location(int connection, unsigned char id, unsigned char loc_h,
-//                       unsigned char loc_l) {
-//
-//   unsigned char params[] =
-//   { GOAL_POSITION,
-//     loc_l,
-//     loc_h,
-//     0x30, // Moving speed L
-//     0x00 // Moving speed H
-//   };
-//
-//   packet p = {id, WRITE_DATA, params, 3};
-//
-//   send_packet(&p, connection);
-//
-//   // unsigned char cs = ~(id + 0x07 + 0x03 + 0x1e + loc_l + loc_h + 0x30 + 0x00);
-//   //
-//   // unsigned char arr[] = {0xff,  0xff,  id,   0x07, 0x03, 0x1e,
-//   //                        loc_l, loc_h, 0x30, 0x00, cs};
-//   //
-//   // int buff_len = 100;
-//   // unsigned char buff[buff_len];
-//   //
-//   // int bytes_read = write_to_connection(connection, arr, 11, buff, buff_len);
-// }
-//
-// void wait_until_done(unsigned char id, int connection) {
-//   unsigned char params[] = {MOVING, 0x01};
-//   packet p = {id, READ_DATA, params, 2};
-//
-//   while (true) {
-//     packet ret = send_packet(&p, connection);
-//     unsigned char active = ret.parameters[0];
-//
-//     if (active == 0x01) {
-//       usleep(100000); // wait 100ms before polling again
-//     } else {
-//       return;
-//     }
-//   }
-// }
 
 void pinch(int connection) {
     dxl_set_goal_position(connection, 5, 0x0130);
@@ -147,37 +39,33 @@ void unpinch(int connection) {
 }
 
 void straighten_arm(int connection) {
-    dxl_set_goal_position(connection, 2, 0x01FF);
-    dxl_set_goal_position(connection, 3, 0x01FF);
-    dxl_wait_until_stopped(connection, 2);
-    dxl_wait_until_stopped(connection, 3);
+    uint8_t ids[2] = {2, 3};
+    uint16_t positions[2] = {0x01FF, 0x01FF};
+
+    dxl_set_goal_position_multi(connection, ids, positions, 2);
+    dxl_wait_until_all_stopped(connection, ids, 2);
 }
 
-void rotate_arm(int connection, unsigned int radians) {
+void rotate_arm(int connection, uint16_t radians) {
     dxl_set_goal_position(connection, 1, radians);
     dxl_wait_until_stopped(connection, 1);
 }
 
-int transition(int connection, unsigned int radians,
-               unsigned int height[3]) {
+int transition(int connection, uint16_t radians,
+               const uint16_t height[3]) {
     straighten_arm(connection);
 
     rotate_arm(connection, radians);
 
-    for (int i = 2; i < 5; i++) {
-        dxl_set_goal_position(connection, i, height[i - 2]);
-    }
+    uint8_t ids[3] = {2, 3, 4};
 
-    dxl_wait_until_stopped(connection, 2);
-    dxl_wait_until_stopped(connection, 3);
-    dxl_wait_until_stopped(connection, 4);
+    dxl_set_goal_position_multi(connection, ids, height, 3);
+    dxl_wait_until_all_stopped(connection, ids, 3);
 
     return 0;
 }
 
-void motor_height_position(int stack_h, unsigned int (*height)[3]) {
-    printf("setting motor height %d!\n", stack_h);
-
+void motor_height_position(int stack_h, uint16_t (*height)[3]) {
     switch (stack_h) {
         case 1:
             memcpy(*height, block_height_1, sizeof(block_height_1));
@@ -218,24 +106,25 @@ void update_stacks(int from, int to) {
 
 void move_block(int from, int to, int connection) {
     printf("Moving block from stack %d to stack %d\n", from, to);
-    printf("Stack heights: %d, %d, %d\n", stacks[0], stacks[1], stacks[2]);
     straighten_arm(connection);
 
-    // pickup
-    unsigned int height[3] = {0};
+    // pickup height
+    uint16_t height[3];
 
     motor_height_position(stacks[from], &height);
 
-    transition(connection, stack_locations[from], height);
+    transition(connection, radial_stack_locations[from], height);
     pinch(connection);
 
     motor_height_position(stacks[to] + 1, &height);
-    transition(connection, stack_locations[to], height);
+    transition(connection, radial_stack_locations[to], height);
     unpinch(connection);
 
     update_stacks(from, to);
 
     straighten_arm(connection);
+
+    printf("Stack heights: %d, %d, %d\n", stacks[0], stacks[1], stacks[2]);
 }
 
 void solve(const int n, const int from_index, const int to_index, const int aux_index, const int connection) {
@@ -248,40 +137,24 @@ void solve(const int n, const int from_index, const int to_index, const int aux_
     solve(n - 1, aux_index, to_index, from_index, connection);
 }
 
-int test_write() {
-    int fd = open("/tmp/robotarm", O_RDWR | O_NOCTTY);
-    if (fd < 0) {
-        perror("open /tmp/robotarm");
-        return 1;
+#define COLOR_RED     "\x1b[31m"
+#define COLOR_GREEN   "\x1b[32m"
+#define COLOR_RESET   "\x1b[0m"
+
+void initialise(int connection) {
+    uint16_t speeds[num_of_motors];
+
+    for (int i = 0; i < num_of_motors; i++) {
+        if (!dxl_ping(connection, motor_ids[i])) {
+            printf(COLOR_RED "ERROR:" COLOR_RESET " Motor %d not found, bad things may happen\n", motor_ids[i]);
+        } else {
+            printf(COLOR_GREEN "FOUND:" COLOR_RESET " Motor with id %d, setting speed\n", motor_ids[i]);
+        }
+
+        speeds[i] = 0x0030;
     }
 
-    // Raw serial config (match emulator: 1M baud, 8N1)
-    struct termios tty;
-    tcgetattr(fd, &tty);
-    cfsetospeed(&tty, B1000000);
-    cfsetispeed(&tty, B1000000);
-    cfmakeraw(&tty);
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;  // 8N1
-    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
-    tty.c_cflag |= (CREAD | CLOCAL);
-    tcsetattr(fd, TCSANOW, &tty);
-
-    // Send Dynamixel-style packet (broadcast read ping ID 1)
-    unsigned char tx[] = {0xFF, 0xFF, 0x01, 0x02, 0x00, 0x01, 0xF9};  // Example
-    ssize_t sent = write(fd, tx, sizeof(tx));
-    printf("Sent %zd bytes\n", sent);
-
-    // Read response
-    unsigned char rx[256];
-    ssize_t len = read(fd, rx, sizeof(rx));
-    if (len > 0) {
-        printf("Received %zd bytes: ", len);
-        for (ssize_t i = 0; i < len; i++) printf("%02X ", rx[i]);
-        printf("\n");
-    }
-
-    close(fd);
-    return 0;
+    dxl_set_moving_speed_multi(connection, motor_ids, speeds, num_of_motors);
 }
 
 int main(int argc, char *argv[]) {
@@ -292,6 +165,7 @@ int main(int argc, char *argv[]) {
     }
 
     int connection = open_connection(argv[1], B1000000);
+    initialise(connection);
 
     straighten_arm(connection);
 
