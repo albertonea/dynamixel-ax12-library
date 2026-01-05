@@ -1,23 +1,23 @@
 #include "dynamixel_protocol.h"
 #include <dynamixel/dynamixel.h>
 
-unsigned char calculate_checksum(const unsigned char id, const unsigned char length,
-                                     const unsigned char instruction,
-                                     const unsigned char *params, const int param_count) {
-    unsigned int sum = id + length + instruction;
+uint8_t calculate_checksum(const uint8_t id, const unsigned char length,
+                                     const uint8_t instruction,
+                                     const uint8_t *params, const int param_count) {
+    uint32_t sum = id + length + instruction;
     for (int i = 0; i < param_count; i++) {
         sum += params[i];
     }
-    return (unsigned char)~sum;
+    return (uint8_t)~sum;
 }
 
-response parse_response(const unsigned char *buffer, int bytes_read) {
+response parse_response(const uint8_t *buffer, int bytes_read) {
     response response = {0};
     response.valid = false;
 
     if (buffer[0] == 0xFF && buffer[1] == 0xFF) {
         response.id = buffer[2];
-        unsigned char rx_length = buffer[3];
+        uint8_t rx_length = buffer[3];
         response.error = buffer[4];
 
         // Extract parameters
@@ -32,13 +32,13 @@ response parse_response(const unsigned char *buffer, int bytes_read) {
     return response;
 }
 
-void build_packet(const unsigned char id,
-    const unsigned char instruction,
-    const unsigned char *params,
+void build_packet(const uint8_t id,
+    const uint8_t instruction,
+    const uint8_t *params,
     const int param_len,
-    unsigned char *packet) {
+    uint8_t *packet) {
 
-    unsigned char length = param_len + 2;
+    uint8_t length = param_len + 2;
 
     packet[0] = 0xFF;
     packet[1] = 0xFF;
@@ -54,16 +54,16 @@ void build_packet(const unsigned char id,
                                                          params, param_len);
 }
 
-response send_instruction(const int connection, const unsigned char id,
-                                   const unsigned char instruction,
-                                    const unsigned char *params, const int param_len) {
+response send_instruction(const int connection, const uint8_t id,
+                                   const uint8_t instruction,
+                                    const uint8_t *params, const int param_len) {
 
     int raw_packet_len = 4 + param_len + 2;
-    unsigned char packet[raw_packet_len];
+    uint8_t packet[raw_packet_len];
 
     build_packet(id, instruction, params, param_len, packet);
 
-    unsigned char rx_buffer[256];
+    uint8_t rx_buffer[256];
     int bytes_read = write_to_connection(connection, packet, raw_packet_len,
                                          rx_buffer, 256);
     

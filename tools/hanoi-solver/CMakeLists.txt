@@ -6,7 +6,7 @@ target_include_directories(hanoi-solver
 
 target_link_libraries(
         hanoi-solver
-        PRIVATE robotarm ${DYNAMIXEL_O}
+        PRIVATE dynamixel_motor ${DYNAMIXEL_O}
 )
 
 # Copy txt file to executable directory post-build

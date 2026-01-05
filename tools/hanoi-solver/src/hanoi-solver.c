@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <dynamixel/dynamixel.h>
-#include <robotarm.h>
+#include <dynamixel_motor.h>
 
 // motors 2, 3, 4 positions for different
 // stack heights of the blacks

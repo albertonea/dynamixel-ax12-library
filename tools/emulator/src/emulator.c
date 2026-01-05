@@ -288,6 +288,7 @@ int create_emulator_port(const char *portname) {
         return -1;
     }
 
+    close(slave_fd);
     return master_fd; // Return master FD for external use if needed
 }
 
@@ -301,6 +302,7 @@ void cleanup_emulator() {
             printf("Cleaned up emulator port: %s\n", robot_emulator->portname);
         }
 
+        close(robot_emulator->fd);
         free(robot_emulator->portname);
         free(robot_emulator);
         robot_emulator = NULL;

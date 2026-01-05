@@ -27,22 +27,22 @@
 #define REG_MOVING_SIZE        1
 
 typedef struct {
-   unsigned char address;
+   uint8_t address;
    int size;
 } dxl_register;
 
 // --- Response Structure ---
 typedef struct {
-    unsigned char id;
-    unsigned char error;
-    unsigned char params[32];
+    uint8_t id;
+    uint8_t error;
+    uint8_t params[32];
     int param_count;
     bool valid;
 } response;
 
 // --- Core Protocol Functions ---
-response send_instruction(int connection, unsigned char id,
-                                   unsigned char instruction,
-                                   const unsigned char *params, int param_len);
+response send_instruction(int connection, uint8_t id,
+                                   uint8_t instruction,
+                                   const uint8_t *params, int param_len);
 
 #endif
