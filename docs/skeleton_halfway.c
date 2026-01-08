@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 void move_to_location(int connection, unsigned char id,
-			unsigned char loc_h, unsigned char loc_l) {
+                      unsigned char loc_h, unsigned char loc_l) {
 
 	unsigned char cs = ~ ( id + 0x07 + 0x03 + 0x1e + loc_l + loc_h +
 				0x30 + 0x00);

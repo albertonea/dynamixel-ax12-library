@@ -12,6 +12,7 @@ add_library(dynamixel_motor
         src/dynamixel_protocol.c
         src/dynamixel_translation.c
         src/dynamixel_translation.h
+        src/dynamixel_constants.h
 )
 target_include_directories(dynamixel_motor PUBLIC include PRIVATE vendor/dynamixel/include)
 

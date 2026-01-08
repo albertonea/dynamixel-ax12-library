@@ -2,6 +2,7 @@
 #include "dynamixel_protocol.h"
 #include <unistd.h>
 
+#include "dynamixel_constants.h"
 #include "dynamixel_translation.h"
 
 uint16_t degrees_to_motor_value(float degrees) {
@@ -25,7 +26,7 @@ bool dxl_ping(int connection, uint8_t id) {
 }
 
 bool dxl_set_goal_position(int connection, uint8_t id, uint16_t position) {
-    return dxl_write_register(connection, id, REG_GOAL_POSITION, position, REG_GOAL_POSITION_SIZE);
+    return dxl_write_register(connection, id, REG_GOAL_POSITION, position, REG_GOAL_POSITION_LEN);
 }
 
 bool dxl_set_goal_position_degrees(int connection, uint8_t id, float degrees) {
@@ -34,7 +35,7 @@ bool dxl_set_goal_position_degrees(int connection, uint8_t id, float degrees) {
         id,
         REG_GOAL_POSITION,
         degrees_to_motor_value(degrees),
-        REG_GOAL_POSITION_SIZE);
+        REG_GOAL_POSITION_LEN);
 }
 
 bool dxl_set_goal_position_multi(int connection, const uint8_t *ids, const uint16_t *positions, int number_of_motors) {
@@ -42,7 +43,7 @@ bool dxl_set_goal_position_multi(int connection, const uint8_t *ids, const uint1
 }
 
 bool dxl_set_moving_speed(int connection, const uint8_t id, uint16_t speed) {
-    return dxl_write_register(connection, id, REG_MOVING_SPEED, speed, REG_GOAL_POSITION_SIZE);
+    return dxl_write_register(connection, id, REG_MOVING_SPEED, speed, REG_GOAL_POSITION_LEN);
 }
 
 bool dxl_set_moving_speed_multi(int connection, const uint8_t *ids, const uint16_t *speeds, int number_of_motors) {
@@ -51,7 +52,7 @@ bool dxl_set_moving_speed_multi(int connection, const uint8_t *ids, const uint16
 
 bool dxl_is_moving(int connection, uint8_t id) {
     unsigned int moving_status = 0;
-    if (dxl_read_register(connection, id, REG_MOVING, &moving_status, REG_MOVING_SIZE)) {
+    if (dxl_read_register(connection, id, REG_MOVING, &moving_status, REG_MOVING_LEN)) {
         return (moving_status == 0x01);
     }
     return false;  // Assume stopped if read fails
