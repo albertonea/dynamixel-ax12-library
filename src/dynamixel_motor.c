@@ -18,19 +18,17 @@ float motor_value_to_degrees(uint16_t value) {
     return value * 300.0f / 1023.0f;
 }
 
-
-
 bool dxl_ping(int connection, uint8_t id) {
     response resp = send_instruction(connection, id, INST_PING, NULL, 0);
     return resp.valid && (resp.error == 0);
 }
 
 bool dxl_set_goal_position(int connection, uint8_t id, uint16_t position) {
-    return dxl_write_register(connection, id, REG_GOAL_POSITION, position, REG_GOAL_POSITION_LEN);
+    return write_register(connection, id, REG_GOAL_POSITION, position, REG_GOAL_POSITION_LEN);
 }
 
 bool dxl_set_goal_position_degrees(int connection, uint8_t id, float degrees) {
-    return dxl_write_register(
+    return write_register(
         connection,
         id,
         REG_GOAL_POSITION,
@@ -39,20 +37,20 @@ bool dxl_set_goal_position_degrees(int connection, uint8_t id, float degrees) {
 }
 
 bool dxl_set_goal_position_multi(int connection, const uint8_t *ids, const uint16_t *positions, int number_of_motors) {
-    return dxl_sync_write_two_bytes(connection, ids, REG_GOAL_POSITION, number_of_motors, positions);
+    return sync_write_two_bytes(connection, ids, REG_GOAL_POSITION, number_of_motors, positions);
 }
 
 bool dxl_set_moving_speed(int connection, const uint8_t id, uint16_t speed) {
-    return dxl_write_register(connection, id, REG_MOVING_SPEED, speed, REG_GOAL_POSITION_LEN);
+    return write_register(connection, id, REG_MOVING_SPEED, speed, REG_GOAL_POSITION_LEN);
 }
 
 bool dxl_set_moving_speed_multi(int connection, const uint8_t *ids, const uint16_t *speeds, int number_of_motors) {
-    return dxl_sync_write_two_bytes(connection, ids, REG_GOAL_POSITION, number_of_motors, speeds);
+    return sync_write_two_bytes(connection, ids, REG_GOAL_POSITION, number_of_motors, speeds);
 }
 
 bool dxl_is_moving(int connection, uint8_t id) {
     unsigned int moving_status = 0;
-    if (dxl_read_register(connection, id, REG_MOVING, &moving_status, REG_MOVING_LEN)) {
+    if (read_register(connection, id, REG_MOVING, &moving_status, REG_MOVING_LEN)) {
         return (moving_status == 0x01);
     }
     return false;  // Assume stopped if read fails

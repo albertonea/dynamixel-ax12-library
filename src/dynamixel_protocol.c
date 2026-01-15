@@ -1,9 +1,11 @@
 #include "dynamixel_protocol.h"
 #include <dynamixel/dynamixel.h>
 
+#include "dynamixel_constants.h"
+
 uint8_t calculate_checksum(const uint8_t id, const unsigned char length,
-                                     const uint8_t instruction,
-                                     const uint8_t *params, const int param_count) {
+                           const uint8_t instruction,
+                           const uint8_t *params, const int param_count) {
     uint32_t sum = id + length + instruction;
     for (int i = 0; i < param_count; i++) {
         sum += params[i];

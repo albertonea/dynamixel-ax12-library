@@ -3,9 +3,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "dynamixel_constants.h"
 #include "dynamixel_protocol.h"
 
-bool dxl_write_register(
+bool write_register(
     int connection,
     uint8_t id,
     uint8_t address,
@@ -25,7 +26,7 @@ bool dxl_write_register(
     return resp.valid && (resp.error == 0);
 }
 
-bool dxl_sync_write_two_bytes(
+bool sync_write_two_bytes(
     const int connection,
     const uint8_t *ids,
     const uint8_t address,
@@ -55,7 +56,7 @@ bool dxl_sync_write_two_bytes(
     return resp.valid && (resp.error == 0);
 }
 
-bool dxl_sync_write_byte(
+bool sync_write_byte(
     const int connection,
     const uint8_t *ids,
     const uint8_t address,
@@ -81,7 +82,7 @@ bool dxl_sync_write_byte(
     return resp.valid && (resp.error == 0);
 }
 
-bool dxl_read_register(int connection, uint8_t id, uint8_t address,
+bool read_register(int connection, uint8_t id, uint8_t address,
                    unsigned int *result, int register_size) {
     uint8_t params[2];
     params[0] = address;

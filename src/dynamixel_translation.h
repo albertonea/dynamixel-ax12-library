@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 
-bool dxl_write_register(
+bool write_register(
     int connection,
     uint8_t id,
     uint8_t address,
@@ -12,7 +12,7 @@ bool dxl_write_register(
     int register_size
     );
 
-bool dxl_sync_write_two_bytes(
+bool sync_write_two_bytes(
     int connection,
     const uint8_t *ids,
     uint8_t address,
@@ -20,7 +20,7 @@ bool dxl_sync_write_two_bytes(
     const uint16_t *values
     );
 
-bool dxl_sync_write_byte(
+bool sync_write_byte(
     int connection,
     const uint8_t *ids,
     uint8_t address,
@@ -28,6 +28,6 @@ bool dxl_sync_write_byte(
     const uint8_t *values
 );
 
-bool dxl_read_register(int connection, uint8_t id, uint8_t address,
+bool read_register(int connection, uint8_t id, uint8_t address,
                    unsigned int *result, int register_size);
 #endif
