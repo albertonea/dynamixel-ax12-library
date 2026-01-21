@@ -10,7 +10,6 @@ uint16_t block_height_1[3] = {0x0110, 0x01a2, 0x00f5};
 uint16_t block_height_2[3] = {0x011f, 0x01b1, 0x00d5};
 uint16_t block_height_3[3] = {0x0136, 0x01b7, 0x00c0};
 uint16_t block_height_4[3] = {0x0125, 0x01fc, 0x0089};
-uint16_t block_height_5[3] = {0x01ae, 0x0084, 0x0289};
 
 // Settings
 // Number of blocks
@@ -81,10 +80,6 @@ void motor_height_position(int stack_h, uint16_t (*height)[3]) {
         case 4:
             //*height = block_height_4;
             memcpy(*height, block_height_4, sizeof(block_height_4));
-            break;
-        case 5:
-            //*height = block_height_5;
-            memcpy(*height, block_height_5, sizeof(block_height_5));
             break;
         default:
             printf("Something has gone wrong! Robot attempting to take non-existent "
