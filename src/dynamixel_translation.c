@@ -7,11 +7,11 @@
 #include "dynamixel_protocol.h"
 
 bool write_register(
-    int connection,
-    uint8_t id,
-    uint8_t address,
+    const int connection,
+    const uint8_t id,
+    const uint8_t address,
     uint16_t value,
-    int register_size
+    const int register_size
     ) {
     uint8_t params[register_size + 1];
     params[0] = address;
@@ -82,8 +82,8 @@ bool sync_write_byte(
     return resp.valid && (resp.error == 0);
 }
 
-bool read_register(int connection, uint8_t id, uint8_t address,
-                   unsigned int *result, int register_size) {
+bool read_register(const int connection, const uint8_t id, const uint8_t address,
+                   unsigned int *result, const int register_size) {
     uint8_t params[2];
     params[0] = address;
     params[1] = (uint8_t)(register_size & 0xFF);

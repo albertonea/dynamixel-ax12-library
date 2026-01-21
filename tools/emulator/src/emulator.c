@@ -92,19 +92,16 @@ int parse_packet(const unsigned char *packet, const int len, unsigned char *resp
         return 0;
     }
 
-    // Generate response based on instruction
     switch (instruction) {
         case DYNAMIXEL_INST_PING: {
 
             printf("DYNAMIXEL_INST_PING\n");
-            // Ping response - return model, version, etc.
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
             response[3] = 0x02;
             response[4] = 0x00;
 
-            // Checksum
             response[5] = calculate_checksum(response, 5);
             *resp_len = 6;
             break;
@@ -118,8 +115,8 @@ int parse_packet(const unsigned char *packet, const int len, unsigned char *resp
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
-            response[3] = reg_len + 2; // Length
-            response[4] = 0x00; // Status OK
+            response[3] = reg_len + 2;
+            response[4] = 0x00;
 
             for (int i = 5; i < reg_len + 5; i++) response[i] = 0x00;
 
@@ -147,13 +144,12 @@ int parse_packet(const unsigned char *packet, const int len, unsigned char *resp
         }
 
         default: {
-            // Unknown instruction - error response
             printf("❓Unknown instruction\n");
             response[0] = DYNAMIXEL_HEADER1;
             response[1] = DYNAMIXEL_HEADER2;
             response[2] = id;
             response[3] = 0x02;
-            response[4] = 0x20; // Instruction error
+            response[4] = 0x20;
             response[5] = calculate_checksum(response, 5);
             *resp_len = 6;
             break;
