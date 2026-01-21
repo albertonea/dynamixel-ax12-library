@@ -202,7 +202,6 @@ int main(int argc, char *argv[]) {
     // Check for correct command line usage (needs serial port path)
     if (argc != 2) {
         fprintf(stderr, "Usage: %s /dev/ttyUSB0\n", argv[0]);
-        fprintf(stderr, "Solves the Hanoi Towers problem with the robot arm connected on /dev/ttyUSB0\n");
         return 1;
     }
 
