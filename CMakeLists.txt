@@ -6,7 +6,6 @@ set(CMAKE_C_STANDARD 99)
 set(DYNAMIXEL_O "${CMAKE_SOURCE_DIR}/vendor/dynamixel/lib/dynamixel.o")
 set(DYNAMIXEL_INCLUDE "${CMAKE_SOURCE_DIR}/vendor/dynamixel/include")
 
-# Build the main library
 add_library(dynamixel_motor
         src/dynamixel_motor.c
         src/dynamixel_protocol.c
@@ -16,6 +15,5 @@ add_library(dynamixel_motor
 )
 target_include_directories(dynamixel_motor PUBLIC include PRIVATE vendor/dynamixel/include)
 
-# Add tools subdirectories
 add_subdirectory(tools/emulator)
 add_subdirectory(tools/hanoi-solver)
