@@ -13,16 +13,24 @@ bool write_register(
     uint16_t value,
     const int register_size
     ) {
-    uint8_t params[register_size + 1];
+    // Create a buffer for parameters: 1 byte for address + N bytes for data
+    int param_len = register_size + 1;
+    uint8_t params[param_len];
+
+    // The first parameter in a WRITE instruction is always the target register address
     params[0] = address;
 
-    // create params from register size
+    // Deconstruct the value into bytes
+    // params[1] = Low Byte, params[2] = High Byte
     for (int i = 1; i < register_size + 1; i++) {
-        params[i] = (uint16_t)(value & 0xFF);
+        params[i] = (uint8_t)(value & 0xFF);
         value >>= 8;
     }
 
-    response resp = send_instruction(connection, id, INST_WRITE, params, 3);
+    // Send the packet
+    response resp = send_instruction(connection, id, INST_WRITE, params, param_len);
+
+    // Return true only if the packet was valid and the motor reported no errors
     return resp.valid && (resp.error == 0);
 }
 
@@ -33,25 +41,34 @@ bool sync_write_two_bytes(
     const int number_of_motors,
     const uint16_t *values
     ) {
-    // (L + 1) * N + 2 (L: Data length for each Dynamixel actuator, N: The number of Dynamixel actuators)
+    // Calculate total packet length for Sync Write:
+    // Formula: (Data Length per motor + 1 for ID) * Num Motors + Address byte + length byte
     int param_len = 3 * (number_of_motors) + 2;
     uint8_t params[param_len];
 
+    // Sync Write Header:
+    // Starting Address of the register
     params[0] = address;
-    params[1] = (uint8_t)(2 & 0xFF);
+    // Length of data to be written to each motor (2 bytes)
+    params[1] = 0x02;
 
-    int idx = 2;
+    int curr_index = 2;
 
-    // create params from register size
+    // Iterate through motors to add ID and Data
     for (int i = 0; i < number_of_motors; i++) {
-        params[idx] = ids[i]; idx++;
+        // Push Motor ID
+        params[curr_index] = ids[i]; curr_index++;
+
         uint16_t curr_value = values[i];
+
+        // Push 2 bytes of data
         for (int j = 0; j < 2; j++) {
-            params[idx] = (uint8_t)(curr_value & 0xFF); idx++;
+            params[curr_index] = (uint8_t)(curr_value & 0xFF); curr_index++;
             curr_value >>= 8;
         }
     }
 
+    // Send to BROADCAST_ADDRESS because Sync Write controls multiple motors simultaneously
     response resp = send_instruction(connection, BROADCAST_ADDRESS, INST_SYNC_WRITE, params, param_len);
     return resp.valid && (resp.error == 0);
 }
@@ -63,21 +80,28 @@ bool sync_write_byte(
     const int number_of_motors,
     const uint8_t *values
     ) {
-    // (L + 1) * N + 2 (L: Data length for each Dynamixel actuator, N: The number of Dynamixel actuators)
+    // Calculate total packet length for Sync Write:
+    // Formula: (Data Length per motor + 1 for ID) * Num Motors + Address Byte + Length Byte
     int param_len = 2 * (number_of_motors) + 2;
     uint8_t params[param_len];
 
+    // Sync Write Header:
+    // Starting Address
     params[0] = address;
-    params[1] = (uint8_t)(1 & 0xFF);
+    // Length of data (1 byte)
+    params[1] = 0x01;
 
-    int idx = 2;
+    int curr_index = 2;
 
-    // create params from register size
+    // Iterate through motors to pack ID and Data
     for (int i = 0; i < number_of_motors; i++) {
-        params[idx] = ids[i]; idx++;
-        params[idx] = values[i]; idx++;
+        // Push Motor ID
+        params[curr_index] = ids[i]; curr_index++;
+        // Push 1 byte of data
+        params[curr_index] = values[i]; curr_index++;
     }
 
+    // Send to BROADCAST_ADDRESS because Sync Write controls multiple motors simultaneously
     response resp = send_instruction(connection, BROADCAST_ADDRESS, INST_SYNC_WRITE, params, param_len);
     return resp.valid && (resp.error == 0);
 }
@@ -85,15 +109,23 @@ bool sync_write_byte(
 bool read_register(const int connection, const uint8_t id, const uint8_t address,
                    unsigned int *result, const int register_size) {
     uint8_t params[2];
+
+    // READ Instruction parameters:
+    // Starting Address to read from
     params[0] = address;
-    params[1] = (uint8_t)(register_size & 0xFF);
+    // Number of bytes to read
+    params[1] = register_size;
 
     response resp = send_instruction(connection, id, INST_READ, params, 2);
 
+    // Check if the response packet is valid and no motor errors occurred
     if (resp.valid && resp.error == 0 && resp.param_count > 0) {
         unsigned int ret_result = 0x00;
+
+        // Reconstruct the multibyte integer from the response array.
         for (int i = 0; i < resp.param_count; i++) {
-            ret_result += ret_result | (resp.params[i] << (i * 8));
+            // Bitwise OR each byte into result
+            ret_result |= resp.params[i] << (i * 8);
         }
 
         *result = ret_result;

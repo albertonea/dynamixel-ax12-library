@@ -4,16 +4,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/**
+ * Represents the status packet returned by a Dynamixel motor
+ */
 typedef struct {
-    uint8_t id;
-    uint8_t error;
-    uint8_t params[32];
-    int param_count;
+    // True if packet contains data
     bool valid;
+    // Responding motor ID
+    uint8_t id;
+    // Motor error status flags
+    uint8_t error;
+    // Response payload data
+    uint8_t params[32];
+    // Number of bytes in params
+    int param_count;
 } response;
 
 /**
- * @brief Sends a raw instruction packet to the Dynamixel bus and parses the response.
+ * Sends a raw instruction packet to the Dynamixel bus and parses the response.
  *
  * This function constructs the packet header, calculates the checksum
  * based on the instruction and parameters, transmits the data over the serial

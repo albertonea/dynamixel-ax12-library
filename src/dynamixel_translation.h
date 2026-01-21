@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /**
- * @brief Writes a value to a specific register on a single Dynamixel motor.
+ * Writes a value to a specific register on a single Dynamixel motor.
  *
  * This function handles the creation of the param array for a write instruction
  *
@@ -25,7 +25,7 @@ bool write_register(
     );
 
 /**
- * @brief Writes to a 2-byte register on multiple motors simultaneously.
+ * Writes to a 2-byte register on multiple motors simultaneously.
  *
  * Sync write allows you to control multiple motors with a single instruction packet,
  * ensuring they act at the exact same time. This function specifically handles
@@ -47,7 +47,7 @@ bool sync_write_two_bytes(
     );
 
 /**
- * @brief Writes to a single byte register on multiple motors simultaneously.
+ * Writes to a single byte register on multiple motors simultaneously.
  *
  * Allows you to control multiple motors with a single instruction packet,
  * ensuring they act at the exact same time. This function specifically handles
@@ -69,7 +69,7 @@ bool sync_write_byte(
 );
 
 /**
- * @brief Reads a value from a specific register on a single Dynamixel motor.
+ * Reads a value from a specific register on a single Dynamixel motor.
  *
  * This function sends a read instruction packet and waits for the status packet
  * response containing the requested data.
