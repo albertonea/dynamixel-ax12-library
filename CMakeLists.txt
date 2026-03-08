@@ -15,5 +15,5 @@ add_library(dynamixel_motor
 )
 target_include_directories(dynamixel_motor PUBLIC include PRIVATE vendor/dynamixel/include)
 
-#add_subdirectory(tools/emulator)
+add_subdirectory(tools/emulator)
 add_subdirectory(tools/hanoi-solver)
